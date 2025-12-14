@@ -1,0 +1,42 @@
+"use client";
+
+import { createContext, useContext, useEffect, useState } from "react";
+import { User, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { auth } from "./firebase";
+
+interface AuthContextType {
+    user: User | null;
+    loading: boolean;
+    signIn: (email: string, pass: string) => Promise<any>;
+    signUp: (email: string, pass: string) => Promise<any>;
+    signInWithGoogle: () => Promise<any>;
+    signOut: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType>({} as AuthContextType);
+
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+    const [user, setUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setUser(user);
+            setLoading(false);
+        });
+        return () => unsubscribe();
+    }, []);
+
+    const signIn = (email: string, pass: string) => signInWithEmailAndPassword(auth, email, pass);
+    const signUp = (email: string, pass: string) => createUserWithEmailAndPassword(auth, email, pass);
+    const signInWithGoogle = () => signInWithPopup(auth, new GoogleAuthProvider());
+    const signOut = () => firebaseSignOut(auth);
+
+    return (
+        <AuthContext.Provider value={{ user, loading, signIn, signUp, signInWithGoogle, signOut }}>
+            {!loading && children}
+        </AuthContext.Provider>
+    );
+};
+
+export const useAuth = () => useContext(AuthContext);
